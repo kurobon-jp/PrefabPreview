@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns:pp="PrefabPreview" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <uie:Toolbar style="height: 24px; margin-right: 0; margin-left: 0;">
+        <ui:VisualElement name="prefab_icon" style="width: 20px; margin-left: 5px; height: 20px; align-content: auto; align-items: auto; align-self: center;" />
+        <ui:Label name="prefab_name" text="Enter prefab edit mode" style="margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 5px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; -unity-text-align: middle-left; -unity-font-style: bold;" />
+        <ui:VisualElement style="flex-grow: 1;" />
+        <uie:ToolbarToggle name="preview_toggle" text="Preview" value="false" />
+    </uie:Toolbar>
+    <ui:VisualElement name="container" enabled="false" style="flex-grow: 1; margin-top: 2px; margin-right: 2px; margin-bottom: 2px; margin-left: 2px; background-color: rgba(0, 0, 0, 0); visibility: visible; display: flex;">
+        <ui:VisualElement name="animator_container" style="flex-grow: 1; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; background-color: rgba(0, 0, 0, 0.2); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
+            <ui:Label text="Animation Clip" style="-unity-font-style: bold;" />
+            <ui:DropdownField name="clips" style="height: 24px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="duration_container" style="flex-grow: 1; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; background-color: rgba(0, 0, 0, 0.2); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
+            <ui:Label text="Duration (Sec)" style="-unity-font-style: bold;" />
+            <pp:FloatSlider min="1" max="10" value="1" name="playback_duration" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; background-color: rgba(0, 0, 0, 0.2); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
+            <ui:Label text="Playback Time" style="-unity-font-style: bold;" />
+            <pp:TimeSlider name="playback_time" style="align-items: flex-start; align-self: flex-start; flex-direction: column;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; margin-top: 5px; margin-right: 5px; margin-bottom: 5px; margin-left: 5px; background-color: rgba(0, 0, 0, 0.2); padding-top: 5px; padding-right: 5px; padding-bottom: 5px; padding-left: 5px;">
+            <ui:Label text="Playback Speed" style="-unity-font-style: bold;" />
+            <pp:FloatSlider min="0.01" max="10" value="1" name="playback_speed" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-grow: 1; flex-direction: row;">
+            <ui:Button name="first_frame" style="height: 24px; background-image: resource(&apos;Images/First&apos;); background-size: 16px 16px; width: 48px;" />
+            <ui:Button name="prev_frame" style="height: 24px; background-image: resource(&apos;Images/Prev&apos;); background-size: 12px 12px; width: 48px;" />
+            <ui:Button name="play_pause" style="height: 24px; background-image: resource(&apos;Images/Play&apos;); -unity-slice-type: sliced; -unity-background-scale-mode: stretch-to-fill; margin-top: 2px; padding-top: 10px; -unity-background-image-tint-color: rgb(255, 255, 255); background-size: 16px 16px; align-items: auto; align-self: auto; align-content: auto; flex-grow: 1;" />
+            <ui:Button name="next_frame" style="height: 24px; background-image: resource(&apos;Images/Next&apos;); background-size: 12px 12px; width: 48px;" />
+            <ui:Button name="last_frame" style="height: 24px; background-image: resource(&apos;Images/Last&apos;); background-size: 16px 16px; width: 48px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

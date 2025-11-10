@@ -1,0 +1,11 @@
+.idea
+Temp
+UserSettings
+*.csproj
+*.sln
+Library
+Logs
+obj
+*.user
+Assets/Samples
+Assets/Samples.meta

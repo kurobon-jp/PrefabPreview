@@ -1,0 +1,81 @@
+using System;
+using UnityEngine.UIElements;
+
+namespace PrefabPreview
+{
+    [UxmlElement]
+    public partial class FloatSlider : VisualElement
+    {
+        private Slider _slider;
+        private FloatField _field;
+        private float _min;
+        private float _max;
+        private float _value;
+
+        public event Action<float> OnValueChanged;
+
+        [UxmlAttribute("min")]
+        public float Min
+        {
+            get => _min;
+            set
+            {
+                _min = value;
+                if (_slider != null) _slider.lowValue = value;
+            }
+        }
+
+        [UxmlAttribute("max")]
+        public float Max
+        {
+            get => _max;
+            set
+            {
+                _max = value;
+                if (_slider != null) _slider.highValue = value;
+            }
+        }
+
+        [UxmlAttribute("value")]
+        public float Value
+        {
+            get => _value;
+            set
+            {
+                _value = value;
+                if (_slider != null) _slider.SetValueWithoutNotify(value);
+                if (_field != null) _field.SetValueWithoutNotify(value);
+            }
+        }
+
+        public FloatSlider()
+        {
+            style.flexDirection = FlexDirection.Row;
+            style.alignItems = Align.Center;
+
+            _slider = new Slider() { style = { flexGrow = 1 } };
+            _field = new FloatField() { style = { width = 60, marginLeft = 4 } };
+
+            Add(_slider);
+            Add(_field);
+
+            _slider.lowValue = _min;
+            _slider.highValue = _max;
+            _slider.value = _value;
+            _field.value = _value;
+
+            _slider.RegisterValueChangedCallback(evt =>
+            {
+                _value = evt.newValue;
+                _field.SetValueWithoutNotify(evt.newValue);
+                OnValueChanged?.Invoke(_value);
+            });
+            _field.RegisterValueChangedCallback(evt =>
+            {
+                _value = evt.newValue;
+                _slider.SetValueWithoutNotify(evt.newValue);
+                OnValueChanged?.Invoke(_value);
+            });
+        }
+    }
+}

@@ -1,0 +1,7 @@
+Assets/TextMeshPro/** linguist-vendored
+
+*.shader linguist-vendored
+*.cginc linguist-vendored
+*.hlsl linguist-vendored
+
+*.cs linguist-language=C#
