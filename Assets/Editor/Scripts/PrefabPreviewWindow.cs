@@ -214,7 +214,7 @@ namespace PrefabPreview
         private void OnEditorUpdate()
         {
             if (Application.isPlaying || _speedSlider == null || !IsPreviewing) return;
-            float playbackTime;
+            var playbackTime = _playbackTime;
             if (!IsPlaying)
             {
                 playbackTime = _timeSlider.Value;
@@ -226,7 +226,7 @@ namespace PrefabPreview
             var timeSinceStartup = EditorApplication.timeSinceStartup;
             var deltaTime = (timeSinceStartup - _lastEditorTime) * _speedSlider.Value;
             _lastEditorTime = timeSinceStartup;
-            playbackTime = _playbackTime + Mathf.Clamp((float)deltaTime, 0, _duration);
+            playbackTime = (float)Math.Clamp(playbackTime + deltaTime, 0f, _duration);
             if (playbackTime >= _duration)
             {
                 IsPlaying = false;
@@ -351,15 +351,12 @@ namespace PrefabPreview
                 if (!ps.gameObject.activeInHierarchy) continue;
                 if (deltaTime != 0)
                 {
-                    time = deltaTime;
+                    ps.Simulate(deltaTime, withChildren: false, restart: false);
                 }
                 else
                 {
-                    ps.Simulate(0f, withChildren: true, restart: true);
-                    ps.Play(true);
+                    ps.Simulate(time, withChildren: false, restart: true);
                 }
-
-                ps.Simulate(time, withChildren: true, restart: false);
             }
         }
 
@@ -386,6 +383,7 @@ namespace PrefabPreview
 
             foreach (var particle in _particles)
             {
+                if (particle == null) continue;
                 particle.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 particle.useAutoRandomSeed = false;
                 particle.Play(false);
