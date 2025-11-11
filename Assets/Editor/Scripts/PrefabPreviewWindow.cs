@@ -38,7 +38,7 @@ namespace PrefabPreview
         private GameObject _prefabContentsRoot;
         private Animator _animator;
         private ParticleSystem[] _particles;
-        private List<ParticleSystem> _parentParticles = new();
+        private List<ParticleSystem> _rootParticles = new();
         private AudioSource[] _audioSources;
         private AnimationClip[] _clips;
         private string[] _clipNames;
@@ -76,6 +76,9 @@ namespace PrefabPreview
                 _isPlaying = value;
                 if (_playButton == null) return;
                 _playButton.style.backgroundImage = _isPlaying ? _pauseImage : _playImage;
+                if (!value || _playbackTime < _duration) return;
+                _playbackTime = 0f;
+                ClearParticles();
             }
         }
 
@@ -209,7 +212,7 @@ namespace PrefabPreview
 
         private void OnEditorUpdate()
         {
-            if (Application.isPlaying || _speedSlider == null) return;
+            if (Application.isPlaying || _speedSlider == null || !IsPreviewing) return;
             float playbackTime;
             if (!IsPlaying)
             {
@@ -226,7 +229,6 @@ namespace PrefabPreview
             if (playbackTime >= _duration)
             {
                 IsPlaying = false;
-                playbackTime = 0f;
             }
 
             SetPlaybackTime(playbackTime);
@@ -244,8 +246,8 @@ namespace PrefabPreview
             if (_prefabName != null)
             {
                 _prefabName.text = Application.isPlaying
-                    ? "Preview disabled during editor playback"
-                    : "Enter prefab edit mode";
+                    ? "Preview disabled during editor playback."
+                    : "Enter prefab edit mode.";
             }
 
             if (_animClips != null)
@@ -286,7 +288,7 @@ namespace PrefabPreview
                     Enumerable.Range(0, x.subEmitters.subEmittersCount)
                         .Select(i => x.subEmitters.GetSubEmitterSystem(i)))
                 .ToList();
-            _parentParticles = _particles.Where(x => !subParticles.Contains(x)).ToList();
+            _rootParticles = _particles.Where(x => !subParticles.Contains(x)).ToList();
 
             _audioSources = root.GetComponentsInChildren<AudioSource>(true);
             _clips = null;
@@ -341,8 +343,8 @@ namespace PrefabPreview
 
         private void UpdateParticles(float time, float deltaTime)
         {
-            if (_parentParticles is not { Count: > 0 }) return;
-            foreach (var ps in _parentParticles)
+            if (_rootParticles is not { Count: > 0 }) return;
+            foreach (var ps in _rootParticles)
             {
                 if (ps == null) continue;
                 if (!ps.gameObject.activeInHierarchy) continue;
@@ -352,11 +354,11 @@ namespace PrefabPreview
                 }
                 else
                 {
-                    ps.Simulate(0f, withChildren: false, restart: true);
-                    ps.Play();
+                    ps.Simulate(0f, withChildren: true, restart: true);
+                    ps.Play(true);
                 }
 
-                ps.Simulate(time, withChildren: false, restart: false);
+                ps.Simulate(time, withChildren: true, restart: false);
             }
         }
 
@@ -376,15 +378,31 @@ namespace PrefabPreview
 
         private void ClearParticles()
         {
+            if (_rootParticles.Count > 0)
+            {
+                SetLockedParticleSystem(_rootParticles[0]);
+            }
+
             foreach (var particle in _particles)
             {
-                particle.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                particle.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 particle.useAutoRandomSeed = false;
+                particle.Play(false);
             }
+        }
+
+        private static void SetLockedParticleSystem(ParticleSystem particle)
+        {
+            var particleSystemEditorUtils =
+                typeof(Editor).Assembly.GetType("UnityEditor.ParticleSystemEditorUtils");
+            var lockedParticleSystem = particleSystemEditorUtils?.GetProperty("lockedParticleSystem",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            lockedParticleSystem?.SetValue(null, particle);
         }
 
         private static void ReloadPrefab()
         {
+            SetLockedParticleSystem(null);
             var stage = PrefabStageUtility.GetCurrentPrefabStage();
             if (stage == null) return;
             var method = stage.GetType().GetMethod("ReloadStage", BindingFlags.NonPublic | BindingFlags.Instance);

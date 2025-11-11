@@ -64,7 +64,7 @@ namespace PrefabPreview
             _slider.highValue = _max;
             _slider.value = _value;
             _field.value = _value;
-
+            _field.formatString = "0.00";
             _slider.RegisterValueChangedCallback(evt =>
             {
                 _value = evt.newValue;
