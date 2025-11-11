@@ -64,7 +64,7 @@ namespace PrefabPreview
                     ReloadPrefab();
                 }
 
-                OnReset();
+                ResetPlayback();
             }
         }
 
@@ -136,7 +136,7 @@ namespace PrefabPreview
             _container.SetEnabled(IsPreviewing);
         }
 
-        private void OnReset()
+        private void ResetPlayback()
         {
             IsPlaying = false;
             SetPlaybackTime(0f);
@@ -153,7 +153,7 @@ namespace PrefabPreview
 
         private void OnClipChanged(ChangeEvent<string> evt)
         {
-            OnReset();
+            ResetPlayback();
             _selectedClipIndex = Array.IndexOf(_clipNames, evt.newValue);
         }
 
@@ -271,7 +271,7 @@ namespace PrefabPreview
                 _speedSlider.Value = 1f;
             }
 
-            OnReset();
+            ResetPlayback();
             IsPreviewing = false;
         }
 
