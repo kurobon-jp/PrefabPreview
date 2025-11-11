@@ -20,6 +20,7 @@ namespace PrefabPreview
         private VisualElement _prefabIcon;
         private Label _prefabName;
         private DropdownField _animClips;
+        private FloatSlider _animationSpeed;
         private FloatSlider _durationSlider;
         private TimeSlider _timeSlider;
         private FloatSlider _speedSlider;
@@ -30,6 +31,7 @@ namespace PrefabPreview
 
         private bool _isPlaying;
         private float _duration;
+        private float _animSpeed = 1f;
         private float _frameRate;
         private float _playbackTime;
         private float _playbackSpeed;
@@ -43,7 +45,6 @@ namespace PrefabPreview
         private AudioSource[] _audioSources;
         private AnimationClip[] _clips;
         private string[] _clipNames;
-        private string[] _stateNames;
 
         private static bool _isPreviewing;
 
@@ -107,6 +108,8 @@ namespace PrefabPreview
             };
             _animClips = rootVisualElement.Q<DropdownField>("clips");
             _animClips.RegisterValueChangedCallback(OnClipChanged);
+            _animationSpeed = rootVisualElement.Q<FloatSlider>("animation_speed");
+            _animationSpeed.OnValueChanged += f => { _animSpeed = f; };
             _playButton = rootVisualElement.Q<Button>("play_pause");
             _playButton.clicked += TogglePlay;
 
@@ -296,8 +299,6 @@ namespace PrefabPreview
             _clipNames = Array.Empty<string>();
             if (_animator != null && _animator.runtimeAnimatorController is AnimatorController controller)
             {
-                var states = controller.layers[0].stateMachine.states;
-                _stateNames = states.Select(x => x.state.name).ToArray();
                 _clips = _animator.runtimeAnimatorController.animationClips;
                 if (_clips is { Length: > 0 })
                 {
@@ -332,11 +333,10 @@ namespace PrefabPreview
 
         private void UpdateAnimator(float time)
         {
-            if (_animator == null || _clips is not { Length: > 0 } || _stateNames is not { Length: > 0 } ||
-                !AnimationMode.InAnimationMode()) return;
+            if (_animator == null || _clips is not { Length: > 0 } || !AnimationMode.InAnimationMode()) return;
             var clip = _clips[_selectedClipIndex];
             if (clip == null) return;
-            _duration = clip.length;
+            _duration = clip.length / _animSpeed;
             _timeSlider.Max = _duration;
             _frameRate = clip.frameRate;
             AnimationMode.SampleAnimationClip(_animator.gameObject, clip, time);
