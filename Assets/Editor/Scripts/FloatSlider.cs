@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace PrefabPreview
@@ -6,8 +7,8 @@ namespace PrefabPreview
     [UxmlElement]
     public partial class FloatSlider : VisualElement
     {
-        private Slider _slider;
-        private FloatField _field;
+        private readonly Slider _slider;
+        private readonly FloatField _field;
         private float _min;
         private float _max;
         private float _value;
@@ -42,9 +43,9 @@ namespace PrefabPreview
             get => _value;
             set
             {
-                _value = value;
-                if (_slider != null) _slider.SetValueWithoutNotify(value);
-                if (_field != null) _field.SetValueWithoutNotify(value);
+                _value = Mathf.Clamp(value, _min, _max);
+                if (_slider != null) _slider.SetValueWithoutNotify(_value);
+                if (_field != null) _field.SetValueWithoutNotify(_value);
             }
         }
 
@@ -53,8 +54,8 @@ namespace PrefabPreview
             style.flexDirection = FlexDirection.Row;
             style.alignItems = Align.Center;
 
-            _slider = new Slider() { style = { flexGrow = 1 } };
-            _field = new FloatField() { style = { width = 60, marginLeft = 4 } };
+            _slider = new Slider { style = { flexGrow = 1 } };
+            _field = new FloatField { style = { width = 60, marginLeft = 4 } };
 
             Add(_slider);
             Add(_field);

@@ -27,8 +27,6 @@ namespace PrefabPreview
         private StyleBackground _playImage;
         private StyleBackground _pauseImage;
 
-        private GameObject _prefabContentsRoot;
-
         private bool _isPlaying;
         private float _duration;
         private float _frameRate;
@@ -37,8 +35,10 @@ namespace PrefabPreview
         private double _lastEditorTime;
         private int _selectedClipIndex;
 
+        private GameObject _prefabContentsRoot;
         private Animator _animator;
         private ParticleSystem[] _particles;
+        private List<ParticleSystem> _parentParticles = new();
         private AudioSource[] _audioSources;
         private AnimationClip[] _clips;
         private string[] _clipNames;
@@ -116,19 +116,6 @@ namespace PrefabPreview
             lastFrame.clicked += () => Jump(_duration);
 
             rootVisualElement.SetEnabled(false);
-
-            rootVisualElement.RegisterCallback<KeyDownEvent>(evt =>
-            {
-                Debug.Log(evt);
-                switch (evt.keyCode)
-                {
-                    case KeyCode.Space:
-                        TogglePlay();
-                        evt.StopImmediatePropagation(); // 他のUIにイベントを伝えない
-                        break;
-                }
-            });
-
             _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
             _pauseImage = new StyleBackground(Resources.Load<Texture2D>("Images/Pause"));
             OnPrefabStageChanged(null);
@@ -172,7 +159,6 @@ namespace PrefabPreview
             IsPlaying = !IsPlaying;
             _lastEditorTime = EditorApplication.timeSinceStartup;
         }
-
 
         private void OnEnable()
         {
@@ -257,7 +243,9 @@ namespace PrefabPreview
 
             if (_prefabName != null)
             {
-                _prefabName.text = "Enter prefab edit mode";
+                _prefabName.text = Application.isPlaying
+                    ? "Preview disabled during editor playback"
+                    : "Enter prefab edit mode";
             }
 
             if (_animClips != null)
@@ -293,6 +281,13 @@ namespace PrefabPreview
             _prefabName.text = root.name;
             _animator = root.GetComponentInChildren<Animator>();
             _particles = root.GetComponentsInChildren<ParticleSystem>(true);
+
+            var subParticles = _particles.SelectMany(x =>
+                    Enumerable.Range(0, x.subEmitters.subEmittersCount)
+                        .Select(i => x.subEmitters.GetSubEmitterSystem(i)))
+                .ToList();
+            _parentParticles = _particles.Where(x => !subParticles.Contains(x)).ToList();
+
             _audioSources = root.GetComponentsInChildren<AudioSource>(true);
             _clips = null;
             _clipNames = Array.Empty<string>();
@@ -346,8 +341,8 @@ namespace PrefabPreview
 
         private void UpdateParticles(float time, float deltaTime)
         {
-            if (_particles is not { Length: > 0 }) return;
-            foreach (var ps in _particles)
+            if (_parentParticles is not { Count: > 0 }) return;
+            foreach (var ps in _parentParticles)
             {
                 if (ps == null) continue;
                 if (!ps.gameObject.activeInHierarchy) continue;
