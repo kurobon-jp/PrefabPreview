@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -86,8 +87,8 @@ namespace PrefabPreview
         {
             _prefabContentsRoot = null;
             var visualTree = Resources.Load<VisualTreeAsset>("PrefabPreviewWindow");
-            var ui = visualTree.Instantiate();
-            rootVisualElement.Add(ui);
+            var root = visualTree.Instantiate();
+            rootVisualElement.Add(root);
             _container = rootVisualElement.Q<VisualElement>("container");
             _animatorContainer = rootVisualElement.Q<VisualElement>("animator_container");
             _durationContainer = rootVisualElement.Q<VisualElement>("duration_container");
@@ -110,13 +111,13 @@ namespace PrefabPreview
             _playButton.clicked += TogglePlay;
 
             var firstFrame = rootVisualElement.Q<Button>("first_frame");
-            firstFrame.clicked += () => Jump(0f);
+            firstFrame.clicked += () => Seek(0f);
             var prevFrame = rootVisualElement.Q<Button>("prev_frame");
-            prevFrame.clicked += () => Jump(_playbackTime - 1f / _frameRate);
+            prevFrame.clicked += () => Seek(_playbackTime - 1f / _frameRate);
             var nextButton = rootVisualElement.Q<Button>("next_frame");
-            nextButton.clicked += () => Jump(_playbackTime + 1f / _frameRate);
+            nextButton.clicked += () => Seek(_playbackTime + 1f / _frameRate);
             var lastFrame = rootVisualElement.Q<Button>("last_frame");
-            lastFrame.clicked += () => Jump(_duration);
+            lastFrame.clicked += () => Seek(_duration);
 
             rootVisualElement.SetEnabled(false);
             _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
@@ -124,7 +125,7 @@ namespace PrefabPreview
             OnPrefabStageChanged(null);
         }
 
-        private void Jump(float time)
+        private void Seek(float time)
         {
             IsPlaying = false;
             SetPlaybackTime(time);
@@ -434,3 +435,4 @@ namespace PrefabPreview
         }
     }
 }
+#endif
