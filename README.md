@@ -5,15 +5,6 @@ It helps you check UI animations and visual effects during development.
 
 ---
 
-## ✨ Features
-
-- 🧩 Preview any **Prefab** in a dedicated **Editor Window**
-- 🎞️ Supports **Animator** playback
-- 💨 Simulates **Particle Systems** in sync
-- 🔊 Plays **AudioSource** components in real-time
-
----
-
 ## 📦 Installation
 Git Path (Unity Package Manager)
 > https://github.com/kurobon-jp/PrefabPreview.git?path=Assets/
