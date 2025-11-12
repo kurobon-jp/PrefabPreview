@@ -77,9 +77,6 @@ namespace PrefabPreview
                 _isPlaying = value;
                 if (_playButton == null) return;
                 _playButton.style.backgroundImage = _isPlaying ? _pauseImage : _playImage;
-                if (!value || _playbackTime < _duration) return;
-                _playbackTime = 0f;
-                ClearParticles();
             }
         }
 
@@ -230,6 +227,7 @@ namespace PrefabPreview
             if (playbackTime >= _duration)
             {
                 IsPlaying = false;
+                playbackTime = 0f;
             }
 
             SetPlaybackTime(playbackTime);
@@ -345,17 +343,17 @@ namespace PrefabPreview
         private void UpdateParticles(float time, float deltaTime)
         {
             if (_rootParticles is not { Count: > 0 }) return;
-            foreach (var ps in _rootParticles)
+            foreach (var particle in _rootParticles)
             {
-                if (ps == null) continue;
-                if (!ps.gameObject.activeInHierarchy) continue;
+                if (particle == null) continue;
+                if (!particle.gameObject.activeInHierarchy) continue;
                 if (deltaTime != 0)
                 {
-                    ps.Simulate(deltaTime, withChildren: false, restart: false);
+                    particle.Simulate(deltaTime, withChildren: false, restart: false);
                 }
                 else
                 {
-                    ps.Simulate(time, withChildren: false, restart: true);
+                    particle.Simulate(time, withChildren: false, restart: true);
                 }
             }
         }
@@ -386,7 +384,6 @@ namespace PrefabPreview
                 if (particle == null) continue;
                 particle.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 particle.useAutoRandomSeed = false;
-                particle.Play(false);
             }
         }
 
