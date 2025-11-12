@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace PrefabPreview
@@ -8,8 +9,10 @@ namespace PrefabPreview
     {
         private readonly FloatSlider _slider;
         private readonly Label _label;
+        private readonly FloatField _max;
 
         public event Action<float> OnValueChanged;
+        public event Action<float> OnMaxChanged;
 
         [UxmlAttribute("min")]
         public float Min
@@ -22,7 +25,11 @@ namespace PrefabPreview
         public float Max
         {
             get => _slider.Max;
-            set => _slider.Max = value;
+            set
+            {
+                _slider.Max = value;
+                _max.value = value;
+            }
         }
 
         [UxmlAttribute("value")]
@@ -41,7 +48,20 @@ namespace PrefabPreview
             _slider = new FloatSlider { style = { flexGrow = 1 } };
             _label = new Label { style = { marginLeft = 4 } };
             Add(_slider);
-            Add(_label);
+            var bottom = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+            _max = new FloatField
+            {
+                formatString = "0.00"
+            };
+            _max.RegisterValueChangedCallback(evt =>
+            {
+                _slider.Max = evt.newValue;
+                OnMaxChanged?.Invoke(evt.newValue);
+            });
+            bottom.Add(_label);
+            bottom.Add(_max);
+            bottom.Add(new Label { text = "Sec", style = { marginLeft = 4 } });
+            Add(bottom);
             SetTime();
             _slider.OnValueChanged += value =>
             {
@@ -52,7 +72,7 @@ namespace PrefabPreview
 
         private void SetTime()
         {
-            _label.text = $"{Value:0.00} / {Max:0.00} Sec";
+            _label.text = $"{Value:0.00} /";
         }
     }
 }

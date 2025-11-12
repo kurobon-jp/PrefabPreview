@@ -15,13 +15,10 @@ namespace PrefabPreview
     public class PrefabPreviewWindow : EditorWindow
     {
         private VisualElement _container;
-        private VisualElement _animatorContainer;
-        private VisualElement _durationContainer;
         private FloatSlider _volumeSlider;
         private VisualElement _prefabIcon;
         private Label _prefabName;
         private DropdownField _animClips;
-        private FloatSlider _durationSlider;
         private TimeSlider _timeSlider;
         private FloatSlider _speedSlider;
         private ToolbarToggle _previewToggle;
@@ -44,7 +41,7 @@ namespace PrefabPreview
         private AudioSource[] _audioSources;
         private AnimationClip[] _clips;
         private string[] _clipNames;
-        private string[] _stateNames;
+        private bool _animationPreview;
 
         private static bool _isPreviewing;
 
@@ -57,12 +54,12 @@ namespace PrefabPreview
                 _isPreviewing = value;
                 if (_isPreviewing)
                 {
-                    EditorApplication.delayCall += AnimationMode.StartAnimationMode;
+                    SetAnimationPreview(_selectedClipIndex > 0);
                     ClearParticles();
                 }
                 else
                 {
-                    EditorApplication.delayCall += AnimationMode.StopAnimationMode;
+                    SetAnimationPreview(false);
                     ReloadPrefab();
                 }
 
@@ -88,8 +85,6 @@ namespace PrefabPreview
             var root = visualTree.Instantiate();
             rootVisualElement.Add(root);
             _container = rootVisualElement.Q<VisualElement>("container");
-            _animatorContainer = rootVisualElement.Q<VisualElement>("animator_container");
-            _durationContainer = rootVisualElement.Q<VisualElement>("duration_container");
             _prefabIcon = rootVisualElement.Q<VisualElement>("prefab_icon");
             _prefabName = rootVisualElement.Q<Label>("prefab_name");
             _previewToggle = rootVisualElement.Q<ToolbarToggle>("preview_toggle");
@@ -98,13 +93,8 @@ namespace PrefabPreview
             _volumeSlider.OnValueChanged += SetAudioVolume;
             _timeSlider = rootVisualElement.Q<TimeSlider>("playback_time");
             _timeSlider.OnValueChanged += f => { IsPlaying = false; };
+            _timeSlider.OnMaxChanged += f => { _duration = f; };
             _speedSlider = rootVisualElement.Q<FloatSlider>("playback_speed");
-            _durationSlider = rootVisualElement.Q<FloatSlider>("playback_duration");
-            _durationSlider.OnValueChanged += f =>
-            {
-                _duration = f;
-                _timeSlider.Max = _duration;
-            };
             _animClips = rootVisualElement.Q<DropdownField>("clips");
             _animClips.RegisterValueChangedCallback(OnClipChanged);
             _playButton = rootVisualElement.Q<Button>("play_pause");
@@ -120,6 +110,7 @@ namespace PrefabPreview
             lastFrame.clicked += () => Seek(_duration);
 
             rootVisualElement.SetEnabled(false);
+            _timeSlider.Max = 1f;
             _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
             _pauseImage = new StyleBackground(Resources.Load<Texture2D>("Images/Pause"));
             OnPrefabStageChanged(null);
@@ -155,7 +146,20 @@ namespace PrefabPreview
         private void OnClipChanged(ChangeEvent<string> evt)
         {
             ResetPlayback();
+            SetAnimationPreview(false);
             _selectedClipIndex = Array.IndexOf(_clipNames, evt.newValue);
+            if (_selectedClipIndex > 0 && _clips is { Length: > 0 })
+            {
+                _duration = _clips[_selectedClipIndex - 1].length;
+                SetAnimationPreview(IsPreviewing);
+            }
+            else
+            {
+                _selectedClipIndex = 0;
+                _duration = 1f;
+            }
+
+            _timeSlider.Max = _duration;
         }
 
         private void TogglePlay()
@@ -297,32 +301,29 @@ namespace PrefabPreview
             _clipNames = Array.Empty<string>();
             if (_animator != null && _animator.runtimeAnimatorController is AnimatorController controller)
             {
-                var states = controller.layers[0].stateMachine.states;
-                _stateNames = states.Select(x => x.state.name).ToArray();
-                _clips = _animator.runtimeAnimatorController.animationClips;
+                _clips = controller.animationClips;
                 if (_clips is { Length: > 0 })
                 {
-                    _clipNames = new string[_clips.Length];
+                    _clipNames = new string[_clips.Length + 1];
+                    _clipNames[0] = "None";
                     for (var i = 0; i < _clips.Length; i++)
                     {
-                        _clipNames[i] = $"{_clips[i].name} ({_clips[i].length:0.00}Sec)";
+                        _clipNames[i + 1] = $"{_clips[i].name} ({_clips[i].length:0.00}Sec)";
                     }
                 }
-
-                _animatorContainer.style.display = DisplayStyle.Flex;
-                _durationContainer.style.display = DisplayStyle.None;
             }
             else
             {
-                _animatorContainer.style.display = DisplayStyle.None;
-                _durationContainer.style.display = DisplayStyle.Flex;
-                _timeSlider.Max = _durationSlider.Value = _duration = Mathf.Max(_duration, 1f);
                 _frameRate = 60f;
             }
 
             _animClips.choices = _clipNames.ToList();
-            _animClips.index = _selectedClipIndex = Mathf.Clamp(_selectedClipIndex, 0, _clipNames.Length - 1);
+            if (_selectedClipIndex == 0 && _clipNames.Length > 1)
+            {
+                _selectedClipIndex = 1;
+            }
 
+            _animClips.index = _selectedClipIndex = Mathf.Clamp(_selectedClipIndex, 0, _clipNames.Length - 1);
             SetAudioVolume(_volumeSlider.Value);
         }
 
@@ -335,13 +336,10 @@ namespace PrefabPreview
 
         private void UpdateAnimator(float time)
         {
-            if (_animator == null || _clips is not { Length: > 0 } || _stateNames is not { Length: > 0 } ||
+            if (_animator == null || _clips is not { Length: > 0 } || _selectedClipIndex == 0 ||
                 !AnimationMode.InAnimationMode()) return;
-            var clip = _clips[_selectedClipIndex];
+            var clip = _clips[_selectedClipIndex - 1];
             if (clip == null) return;
-            _duration = clip.length;
-            _timeSlider.Max = _duration;
-            _frameRate = clip.frameRate;
             AnimationMode.SampleAnimationClip(_animator.gameObject, clip, time);
         }
 
@@ -398,6 +396,20 @@ namespace PrefabPreview
                 if (particle == null) continue;
                 particle.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 particle.useAutoRandomSeed = false;
+            }
+        }
+
+        private void SetAnimationPreview(bool animationPreview)
+        {
+            if (_animationPreview == animationPreview) return;
+            _animationPreview = animationPreview;
+            if (_animationPreview)
+            {
+                AnimationMode.StartAnimationMode();
+            }
+            else
+            {
+                AnimationMode.StopAnimationMode();
             }
         }
 
