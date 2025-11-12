@@ -17,6 +17,7 @@ namespace PrefabPreview
         private VisualElement _container;
         private VisualElement _animatorContainer;
         private VisualElement _durationContainer;
+        private FloatSlider _volumeSlider;
         private VisualElement _prefabIcon;
         private Label _prefabName;
         private DropdownField _animClips;
@@ -93,6 +94,8 @@ namespace PrefabPreview
             _prefabName = rootVisualElement.Q<Label>("prefab_name");
             _previewToggle = rootVisualElement.Q<ToolbarToggle>("preview_toggle");
             _previewToggle.RegisterValueChangedCallback(OnPreviewChanged);
+            _volumeSlider = rootVisualElement.Q<FloatSlider>("audio_volume");
+            _volumeSlider.OnValueChanged += SetAudioVolume;
             _timeSlider = rootVisualElement.Q<TimeSlider>("playback_time");
             _timeSlider.OnValueChanged += f => { IsPlaying = false; };
             _speedSlider = rootVisualElement.Q<FloatSlider>("playback_speed");
@@ -319,6 +322,8 @@ namespace PrefabPreview
 
             _animClips.choices = _clipNames.ToList();
             _animClips.index = _selectedClipIndex = Mathf.Clamp(_selectedClipIndex, 0, _clipNames.Length - 1);
+
+            SetAudioVolume(_volumeSlider.Value);
         }
 
         private void UpdatePreview(float time, float deltaTime = 0f)
@@ -369,6 +374,15 @@ namespace PrefabPreview
                 {
                     audio.Play();
                 }
+            }
+        }
+
+        private void SetAudioVolume(float volume)
+        {
+            foreach (var audio in _audioSources)
+            {
+                if (audio == null || audio.clip == null) continue;
+                audio.volume = volume;
             }
         }
 
