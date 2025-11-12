@@ -73,8 +73,9 @@ namespace PrefabPreview
             });
             _field.RegisterValueChangedCallback(evt =>
             {
-                _value = evt.newValue;
-                _slider.SetValueWithoutNotify(evt.newValue);
+                _value = Mathf.Clamp(evt.newValue, _min, _max);
+                _slider.SetValueWithoutNotify(_value);
+                _field.SetValueWithoutNotify(_value);
                 OnValueChanged?.Invoke(_value);
             });
         }

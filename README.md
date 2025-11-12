@@ -1,6 +1,7 @@
 # PrefabPreview
 
-**PrefabPreview** is a Unity Editor extension that allows you to preview prefabs directly in the Editor — including **Animator**, **ParticleSystem**, and **AudioSource** — **without entering Play Mode**.
+PrefabPreview is a Unity Editor extension that allows you to preview prefabs directly in the Editor — including Animator, ParticleSystem, and AudioSource without entering Play Mode.
+Perfect for checking UI animations and visual effects during development.
 
 ---
 

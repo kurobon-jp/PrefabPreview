@@ -55,8 +55,10 @@ namespace PrefabPreview
             };
             _max.RegisterValueChangedCallback(evt =>
             {
-                _slider.Max = evt.newValue;
-                OnMaxChanged?.Invoke(evt.newValue);
+                var newMax = Mathf.Max(evt.newValue, 0f);
+                _slider.Max = newMax;
+                OnMaxChanged?.Invoke(newMax);
+                _max.SetValueWithoutNotify(newMax);
             });
             bottom.Add(_label);
             bottom.Add(_max);
