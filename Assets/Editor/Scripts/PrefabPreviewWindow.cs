@@ -26,6 +26,7 @@ namespace PrefabPreview
         private StyleBackground _playImage;
         private StyleBackground _pauseImage;
 
+        private PlayModeStateChange _playModeState;
         private bool _isPlaying;
         private float _duration;
         private float _frameRate;
@@ -189,6 +190,7 @@ namespace PrefabPreview
         private void OnPlayModeStateChanged(PlayModeStateChange stateChange)
         {
             IsPreviewing = false;
+            _playModeState = stateChange;
             OnPrefabStageChanged(null);
         }
 
@@ -199,7 +201,7 @@ namespace PrefabPreview
 
         private void OnPrefabStageChanged(PrefabStage _)
         {
-            if (Application.isPlaying)
+            if (EditorApplication.isPlaying)
             {
                 _prefabContentsRoot = null;
                 rootVisualElement.SetEnabled(false);
@@ -217,7 +219,7 @@ namespace PrefabPreview
 
         private void OnEditorUpdate()
         {
-            if (Application.isPlaying || _speedSlider == null || !IsPreviewing) return;
+            if (EditorApplication.isPlaying || _speedSlider == null || !IsPreviewing) return;
             var playbackTime = _playbackTime;
             if (!IsPlaying)
             {
@@ -251,7 +253,7 @@ namespace PrefabPreview
 
             if (_prefabName != null)
             {
-                _prefabName.text = Application.isPlaying
+                _prefabName.text = _playModeState == PlayModeStateChange.EnteredPlayMode
                     ? "Preview disabled during editor playback."
                     : "Enter prefab edit mode.";
             }
