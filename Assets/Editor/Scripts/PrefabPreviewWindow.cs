@@ -14,6 +14,8 @@ namespace PrefabPreview
 {
     public class PrefabPreviewWindow : EditorWindow
     {
+        private const float DefaultDuration = 5f;
+
         private VisualElement _container;
         private FloatSlider _volumeSlider;
         private VisualElement _prefabIcon;
@@ -64,7 +66,7 @@ namespace PrefabPreview
                     ReloadPrefab();
                 }
 
-                ResetPlayback();
+                Seek(0f);
             }
         }
 
@@ -111,7 +113,7 @@ namespace PrefabPreview
             lastFrame.clicked += () => Seek(_duration);
 
             rootVisualElement.SetEnabled(false);
-            _timeSlider.Max = 1f;
+            _timeSlider.Max = _duration = DefaultDuration;
             _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
             _pauseImage = new StyleBackground(Resources.Load<Texture2D>("Images/Pause"));
             OnPrefabStageChanged(null);
@@ -129,12 +131,6 @@ namespace PrefabPreview
             _container.SetEnabled(IsPreviewing);
         }
 
-        private void ResetPlayback()
-        {
-            IsPlaying = false;
-            SetPlaybackTime(0f);
-        }
-
         private void SetPlaybackTime(float playbackTime)
         {
             _playbackTime = Mathf.Clamp(playbackTime, 0f, _duration);
@@ -146,18 +142,21 @@ namespace PrefabPreview
 
         private void OnClipChanged(ChangeEvent<string> evt)
         {
-            ResetPlayback();
+            Seek(0f);
             SetAnimationPreview(false);
             _selectedClipIndex = Array.IndexOf(_clipNames, evt.newValue);
             if (_selectedClipIndex > 0 && _clips is { Length: > 0 })
             {
-                _duration = _clips[_selectedClipIndex - 1].length;
+                var clip = _clips[_selectedClipIndex - 1];
+                _duration = clip.length;
+                _frameRate = clip.frameRate;
                 SetAnimationPreview(IsPreviewing);
             }
             else
             {
+                _duration = DefaultDuration;
+                _frameRate = 60f;
                 _selectedClipIndex = 0;
-                _duration = 1f;
             }
 
             _timeSlider.Max = _duration;
@@ -279,7 +278,7 @@ namespace PrefabPreview
                 _speedSlider.Value = 1f;
             }
 
-            ResetPlayback();
+            Seek(0f);
             IsPreviewing = false;
         }
 
@@ -314,10 +313,6 @@ namespace PrefabPreview
                     }
                 }
             }
-            else
-            {
-                _frameRate = 60f;
-            }
 
             _animClips.choices = _clipNames.ToList();
             if (_selectedClipIndex == 0 && _clipNames.Length > 1)
@@ -350,8 +345,7 @@ namespace PrefabPreview
             if (_rootParticles is not { Count: > 0 }) return;
             foreach (var particle in _rootParticles)
             {
-                if (particle == null) continue;
-                if (!particle.gameObject.activeInHierarchy) continue;
+                if (particle == null || !particle.gameObject.activeInHierarchy) continue;
                 if (deltaTime != 0)
                 {
                     particle.Simulate(deltaTime, withChildren: false, restart: false);
@@ -417,11 +411,9 @@ namespace PrefabPreview
 
         private static void SetLockedParticleSystem(ParticleSystem particle)
         {
-            var particleSystemEditorUtils =
-                typeof(Editor).Assembly.GetType("UnityEditor.ParticleSystemEditorUtils");
-            var lockedParticleSystem = particleSystemEditorUtils?.GetProperty("lockedParticleSystem",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            lockedParticleSystem?.SetValue(null, particle);
+            var type = typeof(Editor).Assembly.GetType("UnityEditor.ParticleSystemEditorUtils");
+            var property = type?.GetProperty("lockedParticleSystem", BindingFlags.Static | BindingFlags.NonPublic);
+            property?.SetValue(null, particle);
         }
 
         private static void ReloadPrefab()
