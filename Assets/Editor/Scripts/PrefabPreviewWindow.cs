@@ -15,6 +15,7 @@ namespace PrefabPreview
     public class PrefabPreviewWindow : EditorWindow
     {
         private const float DefaultDuration = 5f;
+        private const float DefaultFrameRate = 60f;
 
         private VisualElement _container;
         private FloatSlider _volumeSlider;
@@ -31,7 +32,6 @@ namespace PrefabPreview
         private PlayModeStateChange _playModeState;
         private bool _isPlaying;
         private float _duration;
-        private float _frameRate;
         private float _playbackTime;
         private float _playbackSpeed;
         private double _lastEditorTime;
@@ -106,9 +106,9 @@ namespace PrefabPreview
             var firstFrame = rootVisualElement.Q<Button>("first_frame");
             firstFrame.clicked += () => Seek(0f);
             var prevFrame = rootVisualElement.Q<Button>("prev_frame");
-            prevFrame.clicked += () => Seek(_playbackTime - 1f / _frameRate);
+            prevFrame.clicked += () => Seek(_playbackTime - 1f / DefaultFrameRate);
             var nextButton = rootVisualElement.Q<Button>("next_frame");
-            nextButton.clicked += () => Seek(_playbackTime + 1f / _frameRate);
+            nextButton.clicked += () => Seek(_playbackTime + 1f / DefaultFrameRate);
             var lastFrame = rootVisualElement.Q<Button>("last_frame");
             lastFrame.clicked += () => Seek(_duration);
 
@@ -149,13 +149,11 @@ namespace PrefabPreview
             {
                 var clip = _clips[_selectedClipIndex - 1];
                 _duration = clip.length;
-                _frameRate = clip.frameRate;
                 SetAnimationPreview(IsPreviewing);
             }
             else
             {
                 _duration = DefaultDuration;
-                _frameRate = 60f;
                 _selectedClipIndex = 0;
             }
 
