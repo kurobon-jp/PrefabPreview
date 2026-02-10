@@ -298,7 +298,7 @@ namespace PrefabPreview
             _audioSources = root.GetComponentsInChildren<AudioSource>(true);
             _clips = null;
             _clipNames = Array.Empty<string>();
-            if (_animator != null && _animator.runtimeAnimatorController is AnimatorController controller)
+            if (_animator != null && _animator.runtimeAnimatorController is RuntimeAnimatorController controller)
             {
                 _clips = controller.animationClips;
                 if (_clips is { Length: > 0 })
