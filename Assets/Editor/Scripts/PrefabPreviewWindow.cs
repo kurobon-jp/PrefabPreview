@@ -1,10 +1,10 @@
 #if UNITY_EDITOR
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -30,10 +30,7 @@ namespace PrefabPreview
         private StyleBackground _pauseImage;
 
         private PlayModeStateChange _playModeState;
-        private bool _isPlaying;
-        private float _duration;
-        private float _playbackTime;
-        private float _playbackSpeed;
+        private readonly Playback _playback = new();
         private double _lastEditorTime;
         private int _selectedClipIndex;
 
@@ -41,7 +38,8 @@ namespace PrefabPreview
         private Animator _animator;
         private ParticleSystem[] _particles;
         private List<ParticleSystem> _rootParticles = new();
-        private AudioSource[] _audioSources;
+        private readonly List<ParticlePreview> _particlePreviews = new();
+        private readonly List<AudioPreview> _audioPreviews = new();
         private AnimationClip[] _clips;
         private string[] _clipNames;
         private bool _animationPreview;
@@ -72,12 +70,12 @@ namespace PrefabPreview
 
         private bool IsPlaying
         {
-            get => _isPlaying;
+            get => _playback.IsPlaying;
             set
             {
-                _isPlaying = value;
+                _playback.IsPlaying = value;
                 if (_playButton == null) return;
-                _playButton.style.backgroundImage = _isPlaying ? _pauseImage : _playImage;
+                _playButton.style.backgroundImage = _playback.IsPlaying ? _pauseImage : _playImage;
             }
         }
 
@@ -96,7 +94,7 @@ namespace PrefabPreview
             _volumeSlider.OnValueChanged += SetAudioVolume;
             _timeSlider = rootVisualElement.Q<TimeSlider>("playback_time");
             _timeSlider.OnValueChanged += f => { IsPlaying = false; };
-            _timeSlider.OnMaxChanged += f => { _duration = f; };
+            _timeSlider.OnMaxChanged += f => { _playback.Duration = f; };
             _speedSlider = rootVisualElement.Q<FloatSlider>("playback_speed");
             _animClips = rootVisualElement.Q<DropdownField>("clips");
             _animClips.RegisterValueChangedCallback(OnClipChanged);
@@ -106,14 +104,15 @@ namespace PrefabPreview
             var firstFrame = rootVisualElement.Q<Button>("first_frame");
             firstFrame.clicked += () => Seek(0f);
             var prevFrame = rootVisualElement.Q<Button>("prev_frame");
-            prevFrame.clicked += () => Seek(_playbackTime - 1f / DefaultFrameRate);
+            prevFrame.clicked += () => Seek(_playback.Time - 1f / DefaultFrameRate);
             var nextButton = rootVisualElement.Q<Button>("next_frame");
-            nextButton.clicked += () => Seek(_playbackTime + 1f / DefaultFrameRate);
+            nextButton.clicked += () => Seek(_playback.Time + 1f / DefaultFrameRate);
             var lastFrame = rootVisualElement.Q<Button>("last_frame");
-            lastFrame.clicked += () => Seek(_duration);
+            lastFrame.clicked += () => Seek(_playback.Duration);
 
             rootVisualElement.SetEnabled(false);
-            _timeSlider.Max = _duration = DefaultDuration;
+            _playback.Reset();
+            _timeSlider.Max = _playback.Duration;
             _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
             _pauseImage = new StyleBackground(Resources.Load<Texture2D>("Images/Pause"));
             OnPrefabStageChanged(null);
@@ -133,7 +132,7 @@ namespace PrefabPreview
 
         private void SetPlaybackTime(float playbackTime)
         {
-            _playbackTime = Mathf.Clamp(playbackTime, 0f, _duration);
+            _playback.Time = playbackTime;
             if (_timeSlider != null)
             {
                 _timeSlider.Value = playbackTime;
@@ -148,16 +147,16 @@ namespace PrefabPreview
             if (_selectedClipIndex > 0 && _clips is { Length: > 0 })
             {
                 var clip = _clips[_selectedClipIndex - 1];
-                _duration = clip.length;
+                _playback.Duration = clip.length;
                 SetAnimationPreview(IsPreviewing);
             }
             else
             {
-                _duration = DefaultDuration;
+                _playback.Reset();
                 _selectedClipIndex = 0;
             }
 
-            _timeSlider.Max = _duration;
+            _timeSlider.Max = _playback.Duration;
         }
 
         private void TogglePlay()
@@ -217,7 +216,8 @@ namespace PrefabPreview
         private void OnEditorUpdate()
         {
             if (EditorApplication.isPlaying || _speedSlider == null || !IsPreviewing) return;
-            var playbackTime = _playbackTime;
+            var playbackTime = _playback.Time;
+            var playbackDuration = _playback.Duration;
             if (!IsPlaying)
             {
                 playbackTime = _timeSlider.Value;
@@ -229,8 +229,8 @@ namespace PrefabPreview
             var timeSinceStartup = EditorApplication.timeSinceStartup;
             var deltaTime = (timeSinceStartup - _lastEditorTime) * _speedSlider.Value;
             _lastEditorTime = timeSinceStartup;
-            playbackTime = (float)Math.Clamp(playbackTime + deltaTime, 0f, _duration);
-            if (playbackTime >= _duration)
+            playbackTime = (float)Math.Clamp(playbackTime + deltaTime, 0f, playbackDuration);
+            if (playbackTime >= playbackDuration)
             {
                 IsPlaying = false;
                 playbackTime = 0f;
@@ -288,6 +288,14 @@ namespace PrefabPreview
             _prefabName.text = root.name;
             _animator = root.GetComponentInChildren<Animator>();
             _particles = root.GetComponentsInChildren<ParticleSystem>(true);
+            _particlePreviews.Clear();
+            foreach (var particle in _particles)
+            {
+                var pp = particle.gameObject.AddComponent<ParticlePreview>();
+                if (pp == null) continue;
+                pp.Setup(_playback, particle);
+                _particlePreviews.Add(pp);
+            }
 
             var subParticles = _particles.SelectMany(x =>
                     Enumerable.Range(0, x.subEmitters.subEmittersCount)
@@ -295,7 +303,16 @@ namespace PrefabPreview
                 .ToList();
             _rootParticles = _particles.Where(x => !subParticles.Contains(x)).ToList();
 
-            _audioSources = root.GetComponentsInChildren<AudioSource>(true);
+            var audioSources = root.GetComponentsInChildren<AudioSource>(true);
+            _audioPreviews.Clear();
+            foreach (var audioSource in audioSources)
+            {
+                var ap = audioSource.gameObject.AddComponent<AudioPreview>();
+                if (ap == null) continue;
+                ap.Setup(_playback, audioSource);
+                _audioPreviews.Add(ap);
+            }
+
             _clips = null;
             _clipNames = Array.Empty<string>();
             if (_animator != null && _animator.runtimeAnimatorController is RuntimeAnimatorController controller)
@@ -326,7 +343,6 @@ namespace PrefabPreview
         {
             UpdateAnimator(time);
             UpdateParticles(time, deltaTime);
-            UpdateAudioSources();
         }
 
         private void UpdateAnimator(float time)
@@ -355,26 +371,11 @@ namespace PrefabPreview
             }
         }
 
-        private void UpdateAudioSources()
-        {
-            if (_audioSources is not { Length: > 0 } || !_isPlaying) return;
-            foreach (var audio in _audioSources)
-            {
-                if (audio == null || audio.clip == null || !audio.enabled ||
-                    !audio.gameObject.activeInHierarchy) continue;
-                if (!audio.isPlaying)
-                {
-                    audio.Play();
-                }
-            }
-        }
-
         private void SetAudioVolume(float volume)
         {
-            foreach (var audio in _audioSources)
+            foreach (var audioPreview in _audioPreviews)
             {
-                if (audio == null || audio.clip == null) continue;
-                audio.volume = volume;
+                audioPreview?.SetVolume(volume);
             }
         }
 
@@ -446,6 +447,90 @@ namespace PrefabPreview
                 return paths;
             }
         }
+
+        class Playback
+        {
+            private float _time;
+            private float _duration = DefaultDuration;
+
+            public bool IsPlaying { get; set; }
+            public float Speed { get; set; } = 1f;
+
+            public float Duration
+            {
+                get => _duration;
+                set
+                {
+                    _duration = value;
+                    Time = _time;
+                }
+            }
+
+            public float Time
+            {
+                get => _time;
+                set => _time = Mathf.Clamp(value, 0f, Duration);
+            }
+
+            public void Reset()
+            {
+                _duration = DefaultDuration;
+                _time = 0f;
+            }
+        }
+
+        [DisallowMultipleComponent, ExecuteAlways]
+        class ParticlePreview : MonoBehaviour
+        {
+            private Playback _playback;
+            private ParticleSystem _particle;
+
+            public void Setup(Playback playback, ParticleSystem particle)
+            {
+                _playback = playback;
+                _particle = particle;
+                hideFlags = HideFlags.HideInInspector |
+                            HideFlags.HideInHierarchy |
+                            HideFlags.DontSave;
+            }
+
+            private void OnEnable()
+            {
+                if (_particle == null) return;
+                _particle.Simulate(_playback.Time, withChildren: false, restart: true);
+            }
+        }
+
+        [DisallowMultipleComponent, ExecuteAlways]
+        class AudioPreview : MonoBehaviour
+        {
+            private Playback _playback;
+            private AudioSource _audioSource;
+
+            public void Setup(Playback playback, AudioSource audioSource)
+            {
+                _playback = playback;
+                _audioSource = audioSource;
+                hideFlags = HideFlags.HideInInspector |
+                            HideFlags.HideInHierarchy |
+                            HideFlags.DontSave;
+            }
+
+            public void SetVolume(float volume)
+            {
+                if (_audioSource != null)
+                {
+                    _audioSource.volume = volume;
+                }
+            }
+
+            private void OnEnable()
+            {
+                if (_audioSource == null || !_playback.IsPlaying) return;
+                _audioSource.Play();
+            }
+        }
     }
 }
+
 #endif
