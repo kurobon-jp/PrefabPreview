@@ -276,6 +276,7 @@ namespace PrefabPreview
                 _speedSlider.Value = 1f;
             }
 
+            ClearPreviews();
             Seek(0f);
             IsPreviewing = false;
         }
@@ -288,7 +289,7 @@ namespace PrefabPreview
             _prefabName.text = root.name;
             _animator = root.GetComponentInChildren<Animator>();
             _particles = root.GetComponentsInChildren<ParticleSystem>(true);
-            _particlePreviews.Clear();
+
             foreach (var particle in _particles)
             {
                 var pp = particle.gameObject.AddComponent<ParticlePreview>();
@@ -304,7 +305,6 @@ namespace PrefabPreview
             _rootParticles = _particles.Where(x => !subParticles.Contains(x)).ToList();
 
             var audioSources = root.GetComponentsInChildren<AudioSource>(true);
-            _audioPreviews.Clear();
             foreach (var audioSource in audioSources)
             {
                 var ap = audioSource.gameObject.AddComponent<AudioPreview>();
@@ -406,6 +406,24 @@ namespace PrefabPreview
             {
                 AnimationMode.StopAnimationMode();
             }
+        }
+
+        private void ClearPreviews()
+        {
+            foreach (var preview in _particlePreviews)
+            {
+                if (preview == null) continue;
+                DestroyImmediate(preview);
+            }
+
+            foreach (var preview in _audioPreviews)
+            {
+                if (preview == null) continue;
+                DestroyImmediate(preview);
+            }
+            
+            _particlePreviews.Clear();
+            _audioPreviews.Clear();
         }
 
         private static void SetLockedParticleSystem(ParticleSystem particle)
