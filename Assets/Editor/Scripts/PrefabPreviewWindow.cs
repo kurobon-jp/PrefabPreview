@@ -289,7 +289,6 @@ namespace PrefabPreview
             _prefabName.text = root.name;
             _animator = root.GetComponentInChildren<Animator>();
             _particles = root.GetComponentsInChildren<ParticleSystem>(true);
-
             foreach (var particle in _particles)
             {
                 var pp = particle.gameObject.AddComponent<ParticlePreview>();
@@ -421,7 +420,7 @@ namespace PrefabPreview
                 if (preview == null) continue;
                 DestroyImmediate(preview);
             }
-            
+
             _particlePreviews.Clear();
             _audioPreviews.Clear();
         }
@@ -440,6 +439,16 @@ namespace PrefabPreview
             if (stage == null) return;
             var method = stage.GetType().GetMethod("ReloadStage", BindingFlags.NonPublic | BindingFlags.Instance);
             method?.Invoke(stage, null);
+        }
+
+        [InitializeOnLoadMethod]
+        private static void InitializeOnLoad()
+        {
+            var windows = Resources.FindObjectsOfTypeAll<PrefabPreviewWindow>();
+            foreach (var window in windows)
+            {
+                window.ResetPreview();
+            }
         }
 
         [MenuItem("Window/Prefab Preview")]
@@ -507,9 +516,10 @@ namespace PrefabPreview
             {
                 _playback = playback;
                 _particle = particle;
-                hideFlags = HideFlags.HideInInspector |
-                            HideFlags.HideInHierarchy |
-                            HideFlags.DontSave;
+                hideFlags =
+                    HideFlags.HideInInspector |
+                    HideFlags.HideInHierarchy |
+                    HideFlags.DontSave;
             }
 
             private void OnEnable()
@@ -529,9 +539,10 @@ namespace PrefabPreview
             {
                 _playback = playback;
                 _audioSource = audioSource;
-                hideFlags = HideFlags.HideInInspector |
-                            HideFlags.HideInHierarchy |
-                            HideFlags.DontSave;
+                hideFlags =
+                    HideFlags.HideInInspector |
+                    HideFlags.HideInHierarchy |
+                    HideFlags.DontSave;
             }
 
             public void SetVolume(float volume)
