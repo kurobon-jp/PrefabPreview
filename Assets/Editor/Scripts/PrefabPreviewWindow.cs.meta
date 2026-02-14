@@ -1,2 +1,15 @@
 fileFormatVersion: 2
 guid: 81c76d9ad04420941a0a390b80920353
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_ViewDataDictionary: {instanceID: 0}
+  - _treeAsset: {fileID: 9197481963319205126, guid: 010218b3e932499fb78fc488b52dab10, type: 3}
+  - _playIcon: {fileID: 2800000, guid: 591c6c5312e60f748a228f3587eb0571, type: 3}
+  - _pauseIcon: {fileID: 2800000, guid: b81146db6cc02854793274684b734783, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

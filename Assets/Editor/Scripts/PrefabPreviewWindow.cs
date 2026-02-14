@@ -17,6 +17,10 @@ namespace PrefabPreview
         private const float DefaultDuration = 5f;
         private const float DefaultFrameRate = 60f;
 
+        [SerializeField] private VisualTreeAsset _treeAsset;
+        [SerializeField] private Texture2D _playIcon;
+        [SerializeField] private Texture2D _pauseIcon;
+
         private VisualElement _container;
         private FloatSlider _volumeSlider;
         private VisualElement _prefabIcon;
@@ -82,8 +86,7 @@ namespace PrefabPreview
         public void CreateGUI()
         {
             _prefabContentsRoot = null;
-            var visualTree = Resources.Load<VisualTreeAsset>("PrefabPreviewWindow");
-            var root = visualTree.Instantiate();
+            var root = _treeAsset.Instantiate();
             rootVisualElement.Add(root);
             _container = rootVisualElement.Q<VisualElement>("container");
             _prefabIcon = rootVisualElement.Q<VisualElement>("prefab_icon");
@@ -113,8 +116,8 @@ namespace PrefabPreview
             rootVisualElement.SetEnabled(false);
             _playback.Reset();
             _timeSlider.Max = _playback.Duration;
-            _playImage = new StyleBackground(Resources.Load<Texture2D>("Images/Play"));
-            _pauseImage = new StyleBackground(Resources.Load<Texture2D>("Images/Pause"));
+            _playImage = new StyleBackground(_playIcon);
+            _pauseImage = new StyleBackground(_pauseIcon);
             OnPrefabStageChanged(null);
         }
 
