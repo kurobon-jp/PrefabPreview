@@ -12,7 +12,7 @@ using UnityEngine.UIElements;
 
 namespace PrefabPreview
 {
-    public class PrefabPreviewWindow : EditorWindow
+    internal class PrefabPreviewWindow : EditorWindow
     {
         private const float DefaultDuration = 5f;
         private const float DefaultFrameRate = 60f;
@@ -77,7 +77,13 @@ namespace PrefabPreview
             get => _playback.IsPlaying;
             set
             {
+                var isPlaying = _playback.IsPlaying;
                 _playback.IsPlaying = value;
+                if (isPlaying != value)
+                {
+                    OnPlayPause();
+                }
+
                 if (_playButton == null) return;
                 _playButton.style.backgroundImage = _playback.IsPlaying ? _pauseImage : _playImage;
             }
@@ -89,6 +95,7 @@ namespace PrefabPreview
             var root = _treeAsset.Instantiate();
             rootVisualElement.Add(root);
             _container = rootVisualElement.Q<VisualElement>("container");
+            _container.RegisterCallback<WheelEvent>(OnScroll);
             _prefabIcon = rootVisualElement.Q<VisualElement>("prefab_icon");
             _prefabName = rootVisualElement.Q<Label>("prefab_name");
             _previewToggle = rootVisualElement.Q<ToolbarToggle>("preview_toggle");
@@ -105,13 +112,13 @@ namespace PrefabPreview
             _playButton.clicked += TogglePlay;
 
             var firstFrame = rootVisualElement.Q<Button>("first_frame");
-            firstFrame.clicked += () => Seek(0f);
+            firstFrame.clicked += First;
             var prevFrame = rootVisualElement.Q<Button>("prev_frame");
-            prevFrame.clicked += () => Seek(_playback.Time - 1f / DefaultFrameRate);
+            prevFrame.clicked += Prev;
             var nextButton = rootVisualElement.Q<Button>("next_frame");
-            nextButton.clicked += () => Seek(_playback.Time + 1f / DefaultFrameRate);
+            nextButton.clicked += Next;
             var lastFrame = rootVisualElement.Q<Button>("last_frame");
-            lastFrame.clicked += () => Seek(_playback.Duration);
+            lastFrame.clicked += Last;
 
             rootVisualElement.SetEnabled(false);
             _playback.Reset();
@@ -119,6 +126,13 @@ namespace PrefabPreview
             _playImage = new StyleBackground(_playIcon);
             _pauseImage = new StyleBackground(_pauseIcon);
             OnPrefabStageChanged(null);
+        }
+
+        private void OnScroll(WheelEvent evt)
+        {
+            if (!IsPreviewing) return;
+            var value = Mathf.Sign(evt.delta.y);
+            Seek(_playback.Time + value * (1f / DefaultFrameRate));
         }
 
         private void Seek(float time)
@@ -138,7 +152,7 @@ namespace PrefabPreview
             _playback.Time = playbackTime;
             if (_timeSlider != null)
             {
-                _timeSlider.Value = playbackTime;
+                _timeSlider.Value = _playback.Time;
             }
         }
 
@@ -162,10 +176,37 @@ namespace PrefabPreview
             _timeSlider.Max = _playback.Duration;
         }
 
-        private void TogglePlay()
+        internal void TogglePlay()
         {
+            if (!IsPreviewing) return;
             IsPlaying = !IsPlaying;
             _lastEditorTime = EditorApplication.timeSinceStartup;
+        }
+
+        internal void First()
+        {
+            Seek(0f);
+        }
+
+        internal void Prev()
+        {
+            Seek(_playback.Time - 1f / DefaultFrameRate);
+        }
+
+        internal void Next()
+        {
+            Seek(_playback.Time + 1f / DefaultFrameRate);
+        }
+
+        internal void Last()
+        {
+            Seek(_playback.Duration);
+        }
+
+        private void OnPlayPause()
+        {
+            if (!_playback.IsPlaying) return;
+            UpdateAudioSource(_playback.Time);
         }
 
         private void OnEnable()
@@ -373,6 +414,15 @@ namespace PrefabPreview
             }
         }
 
+        private void UpdateAudioSource(float time)
+        {
+            if (time > 0) return;
+            foreach (var audioPreview in _audioPreviews)
+            {
+                audioPreview?.Play();
+            }
+        }
+
         private void SetAudioVolume(float volume)
         {
             foreach (var audioPreview in _audioPreviews)
@@ -548,18 +598,21 @@ namespace PrefabPreview
                     HideFlags.DontSave;
             }
 
+            public void Play()
+            {
+                if (_audioSource == null || !_playback.IsPlaying || !_audioSource.isActiveAndEnabled) return;
+                _audioSource.Play();
+            }
+
             public void SetVolume(float volume)
             {
-                if (_audioSource != null)
-                {
-                    _audioSource.volume = volume;
-                }
+                if (_audioSource == null) return;
+                _audioSource.volume = volume;
             }
 
             private void OnEnable()
             {
-                if (_audioSource == null || !_playback.IsPlaying) return;
-                _audioSource.Play();
+                Play();
             }
         }
     }
