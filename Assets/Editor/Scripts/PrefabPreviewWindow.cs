@@ -106,6 +106,7 @@ namespace PrefabPreview
             _timeSlider.OnValueChanged += f => { IsPlaying = false; };
             _timeSlider.OnMaxChanged += f => { _playback.Duration = f; };
             _speedSlider = rootVisualElement.Q<FloatSlider>("playback_speed");
+            _speedSlider.OnValueChanged += SetPlaybackSpeed;
             _animClips = rootVisualElement.Q<DropdownField>("clips");
             _animClips.RegisterValueChangedCallback(OnClipChanged);
             _playButton = rootVisualElement.Q<Button>("play_pause");
@@ -205,8 +206,7 @@ namespace PrefabPreview
 
         private void OnPlayPause()
         {
-            if (!_playback.IsPlaying) return;
-            UpdateAudioSource(_playback.Time);
+            UpdateAudioSource();
         }
 
         private void OnEnable()
@@ -358,9 +358,10 @@ namespace PrefabPreview
 
             _clips = null;
             _clipNames = Array.Empty<string>();
-            if (_animator != null && _animator.runtimeAnimatorController is RuntimeAnimatorController controller)
+
+            if (_animator != null && _animator.runtimeAnimatorController != null)
             {
-                _clips = controller.animationClips;
+                _clips = _animator.runtimeAnimatorController.animationClips;
                 if (_clips is { Length: > 0 })
                 {
                     _clipNames = new string[_clips.Length + 1];
@@ -414,12 +415,19 @@ namespace PrefabPreview
             }
         }
 
-        private void UpdateAudioSource(float time)
+        private void UpdateAudioSource()
         {
-            if (time > 0) return;
+            var time = _playback.Time;
             foreach (var audioPreview in _audioPreviews)
             {
-                audioPreview?.Play();
+                if (!_playback.IsPlaying)
+                {
+                    audioPreview?.Pause();
+                }
+                else if (time > 0)
+                {
+                    audioPreview?.Play();
+                }
             }
         }
 
@@ -428,6 +436,14 @@ namespace PrefabPreview
             foreach (var audioPreview in _audioPreviews)
             {
                 audioPreview?.SetVolume(volume);
+            }
+        }
+        
+        private void SetPlaybackSpeed(float speed)
+        {
+            foreach (var audioPreview in _audioPreviews)
+            {
+                audioPreview?.SetSpeed(speed);
             }
         }
 
@@ -534,7 +550,6 @@ namespace PrefabPreview
             private float _duration = DefaultDuration;
 
             public bool IsPlaying { get; set; }
-            public float Speed { get; set; } = 1f;
 
             public float Duration
             {
@@ -600,18 +615,31 @@ namespace PrefabPreview
 
             public void Play()
             {
-                if (_audioSource == null || !_playback.IsPlaying || !_audioSource.isActiveAndEnabled) return;
+                if (_audioSource == null || !_audioSource.isActiveAndEnabled) return;
                 _audioSource.Play();
             }
 
+            public void Pause()
+            {
+                if (_audioSource == null || !_audioSource.isActiveAndEnabled) return;
+                _audioSource.Pause();
+            }
+            
             public void SetVolume(float volume)
             {
                 if (_audioSource == null) return;
                 _audioSource.volume = volume;
             }
+            
+            public void SetSpeed(float speed)
+            {
+                if (_audioSource == null) return;
+                _audioSource.pitch = speed;
+            }
 
             private void OnEnable()
             {
+                if (_audioSource == null || !_playback.IsPlaying || !_audioSource.isActiveAndEnabled) return;
                 Play();
             }
         }
