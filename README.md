@@ -9,6 +9,9 @@ It helps you check UI animations and visual effects during development.
 Git Path (Unity Package Manager)
 > https://github.com/kurobon-jp/PrefabPreview.git?path=Assets/
 
+#### Requirement
+- Unity 2022.1 higher
+
 ---
 
 ## 🧭 Usage
