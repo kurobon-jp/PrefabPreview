@@ -15,11 +15,5 @@
     "ainimation",
     "particle"
   ],
-  "dependencies": {},
-  "samples": [
-    {
-      "displayName": "PrefabPreview Sample",
-      "path": "Samples~"
-    }
-  ]
+  "dependencies": {}
 }
